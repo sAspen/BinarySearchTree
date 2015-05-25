@@ -7,25 +7,14 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    public enum TraversalMethods
-    {
-        Preorder,
-        Inorder,
-        Postorder
-    }
 
-    public abstract class BinaryTree<T> : ICollection, ICollection<T> where T : IComparable<T>
+    public abstract class BinaryTree<T> : EnumerableBinaryTree<T>, ICollection, ICollection<T> where T : IComparable<T>, ICloneable
     {
         private BinaryTreeNode<T> root = null;
 
         public BinaryTree() { }
 
-        public virtual void Clear()
-        {
-            root = null;
-        }
-
-        internal virtual BinaryTreeNode<T> Root
+        internal override IEnumerableBinaryTreeNode<T> Root
         {
             get
             {
@@ -33,7 +22,7 @@ namespace Trees
             }
             set
             {
-                root = value;
+                root = (BinaryTreeNode<T>) value;
             }
         }
 
@@ -49,31 +38,15 @@ namespace Trees
 
         public abstract bool Contains(T item);
 
-        public abstract void CopyTo(T[] array, int arrayIndex);
+        public abstract int Count { get; }
 
-        public abstract int Count
-        {
-            get;
-        }
-
-        public abstract bool IsReadOnly
-        {
-            get;
-        }
+        public abstract bool IsReadOnly { get; }
 
         public abstract bool Remove(T item);
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void CopyTo(Array array, int index);
 
-        public abstract IEnumerator<T> GetEnumerator();
-
-        public void CopyTo(Array array, int index)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void CopyTo(T[] array, int arrayIndex);
 
         public bool IsSynchronized
         {

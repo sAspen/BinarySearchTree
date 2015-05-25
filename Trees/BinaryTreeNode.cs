@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    internal abstract class BinaryTreeNode<T> : Node<T>, ICollection where T : IComparable<T>
+    internal abstract class BinaryTreeNode<T> : Node<T>, IEnumerableBinaryTreeNode<T> where T : IComparable<T>, ICloneable
     {
         public BinaryTreeNode() : base() { }
         public BinaryTreeNode(T data) : base(data, null) { }
         public BinaryTreeNode(T data, NodeList<T> children)
-            : base(data, children)
         {
             if (children.Count > 0) {
                 var t = children[0].GetType();
@@ -21,6 +20,18 @@ namespace Trees
                     throw new ArgumentException();
                 }
             }
+
+            Value = (T) data.Clone();
+            base.Neighbors = children;
+        }
+        public BinaryTreeNode(T data, BinarySearchTreeNode<T> left, BinarySearchTreeNode<T> right)
+        {
+            base.Value = data;
+            NodeList<T> children = new NodeList<T>(2);
+            children[0] = left;
+            children[1] = right;
+
+            base.Neighbors = children;
         }
 
         public BinaryTreeNode(T data, BinaryTreeNode<T> left, BinaryTreeNode<T> right)
@@ -33,7 +44,7 @@ namespace Trees
             base.Neighbors = children;
         }
 
-        public BinaryTreeNode<T> Left
+        public IEnumerableBinaryTreeNode<T> Left
         {
             get
             {
@@ -49,11 +60,11 @@ namespace Trees
                     base.Neighbors = new NodeList<T>(2);
                 }
 
-                base.Neighbors[0] = value;
+                base.Neighbors[0] = (BinaryTreeNode<T>) value;
             }
         }
 
-        public BinaryTreeNode<T> Right
+        public IEnumerableBinaryTreeNode<T> Right
         {
             get
             {
@@ -69,7 +80,7 @@ namespace Trees
                     base.Neighbors = new NodeList<T>(2);
                 }
 
-                base.Neighbors[1] = value;
+                base.Neighbors[1] = (BinaryTreeNode<T>) value;
             }
         }
 
@@ -101,7 +112,7 @@ namespace Trees
         {
             get
             {
-                var parents = new Stack<BinaryTreeNode<T>>();
+                var parents = new Stack<IEnumerableBinaryTreeNode<T>>();
                 var current = this;
                 while (parents.Count > 0 || current != null) {
                     if (current != null) {
@@ -109,11 +120,12 @@ namespace Trees
                         if (current.Right != null) {
                             parents.Push(current.Right);
                         }
-                        current = current.Left;
+                        current = (BinaryTreeNode<T>) current.Left;
                     } else {
-                        current = parents.Pop();
+                        current = (BinaryTreeNode<T>) parents.Pop();
                     }
                 }
+                yield break;
             }
         }
 
@@ -121,18 +133,19 @@ namespace Trees
         {
             get
             {
-                var parents = new Stack<BinaryTreeNode<T>>();
+                var parents = new Stack<IEnumerableBinaryTreeNode<T>>();
                 var current = this;
                 while (parents.Count > 0 || current != null) {
                     if (current != null) {
                         parents.Push(current);
-                        current = current.Left;
+                        current = (BinaryTreeNode<T>) current.Left;
                     } else {
-                        current = parents.Pop();
+                        current = (BinaryTreeNode<T>) parents.Pop();
                         yield return current.Value;
-                        current = current.Right;
+                        current = (BinaryTreeNode<T>) current.Right;
                     }
                 }
+                yield break;
             }
         }
 
@@ -140,22 +153,23 @@ namespace Trees
         {
             get
             {
-                var parents = new Stack<BinaryTreeNode<T>>();
+                var parents = new Stack<IEnumerableBinaryTreeNode<T>>();
                 BinaryTreeNode<T> current = this, previous = null;
                 while (parents.Count > 0 || current != null) {
                     if (current != null) {
                         parents.Push(current);
-                        current = current.Left;
+                        current = (BinaryTreeNode<T>) current.Left;
                     } else {
                         var peek = parents.Peek();
                         if (peek.Right != null && previous != peek.Right) {
-                            current = peek.Right;
+                            current = (BinaryTreeNode<T>) peek.Right;
                         } else {
                             yield return peek.Value;
-                            previous = parents.Pop();
+                            previous = (BinaryTreeNode<T>) parents.Pop();
                         }
                     }
                 }
+                yield break;
             }
         }
 
@@ -192,6 +206,16 @@ namespace Trees
             }
         }
 
+        public void CopyTo(Array array, int index)
+        {
+            if ((T[]) array == null) {
+                throw new ArgumentException("The type of the source ICollection cannot be cast " +
+                    "automatically to the type of the destination array.");
+            }
+
+            CopyTo((T[]) array, index);
+        }
+
         public virtual void CopyTo(T[] array, int arrayIndex)
         {
             CopyTo(array, arrayIndex, TraversalMethods.Inorder);
@@ -205,6 +229,9 @@ namespace Trees
             if (arrayIndex < 0) {
                 throw new ArgumentOutOfRangeException("arrayIndex is less than 0.");
             }
+            if (array.Rank > 1) {
+                throw new ArgumentException("array is multidimensional.");
+            }
             if (array.Length - arrayIndex < Count) {
                 throw new ArgumentException("The number of elements in the source ICollection<T> is greater" +
                     "than the available space from arrayIndex to the end of the destination array.");
@@ -212,7 +239,7 @@ namespace Trees
 
             var enumerator = GetEnumerator(method);
             for (int i = 0; enumerator.MoveNext(); i++) {
-                array[arrayIndex + i++] = enumerator.Current;
+                array[arrayIndex + i++] = (T) enumerator.Current.Clone();
             }
         }
 
@@ -224,19 +251,6 @@ namespace Trees
         public object SyncRoot
         {
             get { return null; }
-        }
-
-        public void CopyTo(Array array, int index)
-        {
-            if (array.Rank > 1) {
-                throw new ArgumentException("array is multidimensional.");
-            }
-            if ((T[]) array == null) {
-                throw new ArgumentException("The type of the source ICollection cannot be cast " + 
-                    "automatically to the type of the destination array.");
-            }
-
-            CopyTo((T[]) array, index);
         }
     }
 }

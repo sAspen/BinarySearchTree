@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    internal class NodeList<T> : Collection<Node<T>> where T : IComparable<T>
+    internal class NodeList<T> : Collection<Node<T>> where T : IComparable<T>, ICloneable
     {
         public NodeList() : base() { }
 

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Trees
 {
 
-    public class BinarySearchTree<T> : BinaryTree<T> where T : IComparable<T>
+    public class BinarySearchTree<T> : BinaryTree<T> where T : IComparable<T>, ICloneable
     {
         private bool RemoveUsingPredecessor = true;
 
@@ -36,9 +36,10 @@ namespace Trees
         public override void Add(T data)
         {
             if (Root == null) {
-                return;
+                Root = new BinarySearchTreeNode<T>(data);
+            } else {
+                ((BinarySearchTreeNode<T>) Root).Add(data); 
             }
-            ((BinarySearchTreeNode<T>) Root).Add(data);
         }
 
         public override bool Remove(T data)
@@ -49,69 +50,20 @@ namespace Trees
             return ((BinarySearchTreeNode<T>) Root).Remove(data, !(RemoveUsingPredecessor = !RemoveUsingPredecessor));
         }
 
-        internal virtual BinarySearchTreeNode<T> Min()
+        internal virtual T Min()
         {
             if (Root == null) {
-                return null;
+                return default(T);
             }
             return ((BinarySearchTreeNode<T>) Root).Min();
         }
 
-        internal virtual BinarySearchTreeNode<T> Max()
+        internal virtual T Max()
         {
             if (Root == null) {
-                return null;
+                return default(T);
             }
             return ((BinarySearchTreeNode<T>) Root).Max();
-        }
-
-        public override IEnumerator<T> GetEnumerator()
-        {
-            if (Root == null) {
-                return Enumerable.Empty<T>().GetEnumerator();
-            }
-            return Root.GetEnumerator();
-        }
-
-        public IEnumerator<T> GetEnumerator(TraversalMethods method)
-        {
-            if (Root == null) {
-                return Enumerable.Empty<T>().GetEnumerator();
-            }
-            return Root.GetEnumerator(method);
-        }
-
-        public IEnumerator<T> Preorder
-        { 
-            get
-            {
-                if (Root == null) {
-                    return Enumerable.Empty<T>().GetEnumerator();
-                }
-                return Root.GetEnumerator(TraversalMethods.Preorder);
-            }
-        }
-
-        public IEnumerator<T> Inorder
-        {
-            get
-            {
-                if (Root == null) {
-                    return Enumerable.Empty<T>().GetEnumerator();
-                }
-                return Root.GetEnumerator(TraversalMethods.Inorder);
-            }
-        }
-
-        public IEnumerator<T> Postorder
-        {
-            get
-            {
-                if (Root == null) {
-                    return Enumerable.Empty<T>().GetEnumerator();
-                }
-                return Root.GetEnumerator(TraversalMethods.Postorder);
-            }
         }
 
         public List<T> ToList()
@@ -137,21 +89,31 @@ namespace Trees
                 if (Root == null) {
                     return 0;
                 }
-                return Root.Count;
+                return ((BinarySearchTreeNode<T>) Root).Count;
             }
+        }
+
+        public override void CopyTo(Array array, int index)
+        {
+            if ((T[]) array == null) {
+                throw new ArgumentException("The type of the source ICollection cannot be cast " +
+                    "automatically to the type of the destination array.");
+            }
+
+            CopyTo((T[]) array, index);
         }
 
         public override void CopyTo(T[] array, int arrayIndex)
         {
             if (Root != null) {
-                Root.CopyTo(array, arrayIndex, TraversalMethods.Inorder);
+                ((BinarySearchTreeNode<T>) Root).CopyTo(array, arrayIndex, TraversalMethods.Inorder);
             }
         }
 
         public void CopyTo(T[] array, int arrayIndex, TraversalMethods method)
         {
             if (Root != null) {
-                Root.CopyTo(array, arrayIndex, method);
+                ((BinarySearchTreeNode<T>) Root).CopyTo(array, arrayIndex, method);
             }
         }
         

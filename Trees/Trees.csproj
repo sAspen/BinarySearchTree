@@ -43,9 +43,12 @@
     <Compile Include="BinarySearchTreeNode.cs" />
     <Compile Include="BinaryTree.cs" />
     <Compile Include="BinaryTreeNode.cs" />
+    <Compile Include="KdTree.cs" />
+    <Compile Include="KdTreeNode.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="NodeList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="EnumerableBinaryTree.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -6,21 +6,14 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    internal class BinarySearchTreeNode<T> : BinaryTreeNode<T> where T : IComparable<T>
+    internal class BinarySearchTreeNode<T> : BinaryTreeNode<T> where T : IComparable<T>, ICloneable
     {
         private bool RemoveUsingPredecessor = false;
 
         public BinarySearchTreeNode() : base() { }
         public BinarySearchTreeNode(T data) : base(data, null) { }
         public BinarySearchTreeNode(T data, BinarySearchTreeNode<T> left, BinarySearchTreeNode<T> right)
-        {
-            base.Value = data;
-            NodeList<T> children = new NodeList<T>(2);
-            children[0] = left;
-            children[1] = right;
-
-            base.Neighbors = children;
-        }
+            : base(data, new NodeList<T> { left, right }) { }
 
         public new BinarySearchTreeNode<T> Left
         {
@@ -107,12 +100,12 @@ namespace Trees
                     arguments[VisitNodeArgument.WentLeft] = true;
 
                     arguments[VisitNodeArgument.Parent] = current;
-                    current = current.Left;
+                    current = (BinarySearchTreeNode<T>) current.Left;
                 } else {
                     arguments[VisitNodeArgument.WentLeft] = false;
 
                     arguments[VisitNodeArgument.Parent] = current;
-                    current = current.Right;
+                    current = (BinarySearchTreeNode<T>) current.Right;
                 }
             }
 
@@ -187,7 +180,7 @@ namespace Trees
                              parent.Left = node.Right;
                          }
                      } else {
-                         BinarySearchTreeNode<T> predecessorParent, predecessor = GetPredecessorOf(node, out predecessorParent);
+                         BinarySearchTreeNode<T> predecessorParent, predecessor = node.GetPredecessorNode(out predecessorParent);
 
                          predecessorParent.Right = predecessor.Left;
 
@@ -215,7 +208,7 @@ namespace Trees
                             parent.Right = node.Left;
                         }
                     } else {
-                        BinarySearchTreeNode<T> successorParent, successor = GetSuccessorOf(node, out successorParent);
+                        BinarySearchTreeNode<T> successorParent, successor = node.GetSuccessorNode(out successorParent);
 
                         successorParent.Left = successor.Right;
 
@@ -236,73 +229,94 @@ namespace Trees
                 VisitReturnFalse);
         }
 
-        internal virtual BinarySearchTreeNode<T> Min()
+        internal virtual T Min()
         {
             BinarySearchTreeNode<T> dummy;
             return Min(out dummy);
         }
 
-        internal BinarySearchTreeNode<T> Min(out BinarySearchTreeNode<T> successorParent)
+        internal T Min(out BinarySearchTreeNode<T> parent)
         {
-            successorParent = null;
-            var node = this;
-            if (node != null) {
-                while (node.Left != null) {
-                    successorParent = node;
-                    node = (BinarySearchTreeNode<T>) node.Left;
-                }
-            }
-            return  node;
+            return MinNode(out parent).Value;
         }
 
-        internal virtual BinarySearchTreeNode<T> Max()
+        internal BinarySearchTreeNode<T> MinNode(out BinarySearchTreeNode<T> parent)
+        {
+            parent = null;
+            var node = this;
+            while (node.Left != null) {
+                parent = node;
+                node = (BinarySearchTreeNode<T>) node.Left;
+            }
+            return node;
+        }
+
+        internal virtual T Max()
         {
             BinarySearchTreeNode<T> dummy;
             return Max(out dummy);
         }
 
-        internal BinarySearchTreeNode<T> Max(out BinarySearchTreeNode<T> successorParent)
+        internal T Max(out BinarySearchTreeNode<T> parent)
         {
-            successorParent = null;
+            return MaxNode(out parent).Value;
+        }
+
+        internal BinarySearchTreeNode<T> MaxNode(out BinarySearchTreeNode<T> parent)
+        {
+            parent = null;
             var node = this;
-            if (node != null) {
-                while (node.Right != null) {
-                    successorParent = node;
-                    node = (BinarySearchTreeNode<T>) node.Right;
-                }
+            while (node.Right != null) {
+                parent = node;
+                node = (BinarySearchTreeNode<T>) node.Right;
             }
             return node;
         }
 
-        internal BinarySearchTreeNode<T> GetPredecessorOf(BinarySearchTreeNode<T> node)
+        internal T GetPredecessor()
+        {
+            if (Left == null) {
+                return default(T);
+            }
+            return Left.Max();
+        }
+
+        internal BinarySearchTreeNode<T> GetPredecessorNode()
         {
             BinarySearchTreeNode<T> dummy;
-            return GetPredecessorOf(node, out dummy);
+            return GetPredecessorNode(out dummy);
         }
 
-        internal BinarySearchTreeNode<T> GetPredecessorOf(BinarySearchTreeNode<T> node, out BinarySearchTreeNode<T> successorParent)
+        internal BinarySearchTreeNode<T> GetPredecessorNode(out BinarySearchTreeNode<T> parent)
         {
-            successorParent = null;
-            if (node == null || node.Right == null) {
+            if (Left == null) {
+                parent = null;
                 return null;
             }
-            return Max(out successorParent);
+            return Left.MaxNode(out parent);
         }
 
-        internal BinarySearchTreeNode<T> GetSuccessorOf(BinarySearchTreeNode<T> node)
+        internal T GetSuccessor()
+        {
+            if (Right == null) {
+                return default(T);
+            }
+            return Right.Min();
+        }
+
+        internal BinarySearchTreeNode<T> GetSuccessorNode()
         {
             BinarySearchTreeNode<T> dummy;
-            return GetSuccessorOf(node, out dummy);
+            return GetSuccessorNode(out dummy);
         }
 
-        internal BinarySearchTreeNode<T> GetSuccessorOf(BinarySearchTreeNode<T> node, out BinarySearchTreeNode<T> successorParent)
+        internal BinarySearchTreeNode<T> GetSuccessorNode(out BinarySearchTreeNode<T> parent)
         {
-            successorParent = null;
-            if (node == null || node.Left == null) {
+            if (Right == null) {
+                parent = null;
                 return null;
             }
-            return Min(out successorParent);
+            return Right.MinNode(out parent);
         }
-
     }
 }

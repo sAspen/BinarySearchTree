@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    internal abstract class Node<T> where T : IComparable<T>
+    internal abstract class Node<T> where T : IComparable<T>, ICloneable
     {
         private T data;
         protected NodeList<T> Neighbors = null;
@@ -16,7 +16,7 @@ namespace Trees
         public Node(T data) : this(data, null) { }
         public Node(T data, NodeList<T> neighbors)
         {
-            this.data = data;
+            this.data = (T) data.Clone();
             this.Neighbors = neighbors;
         }
 
