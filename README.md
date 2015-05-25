@@ -1,3 +1,3 @@
 # Trees
 
-Library of tree data structures.
+C# library of tree data structures.
