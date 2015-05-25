@@ -7,21 +7,25 @@ using System.Threading.Tasks;
 
 namespace Trees
 {
-    public abstract class BinaryTree<T> : ICollection<T> where T : IComparable<T>, IEquatable<T>
+    public enum TraversalMethods
     {
-        private BinaryTreeNode<T> root;
+        Preorder,
+        Inorder,
+        Postorder
+    }
 
-        public BinaryTree()
-        {
-            root = null;
-        }
+    public abstract class BinaryTree<T> : ICollection, ICollection<T> where T : IComparable<T>
+    {
+        private BinaryTreeNode<T> root = null;
+
+        public BinaryTree() { }
 
         public virtual void Clear()
         {
             root = null;
         }
 
-        public BinaryTreeNode<T> Root
+        internal virtual BinaryTreeNode<T> Root
         {
             get
             {
@@ -47,35 +51,38 @@ namespace Trees
 
         public abstract void CopyTo(T[] array, int arrayIndex);
 
-        public virtual int Count
+        public abstract int Count
         {
-            get
-            {
-                return 0;
-            }
+            get;
         }
 
-        public virtual bool IsReadOnly
+        public abstract bool IsReadOnly
         {
-            get
-            {
-                return true;
-            }
+            get;
         }
 
         public abstract bool Remove(T item);
 
-
-        protected abstract IEnumerator<T> GenericEnumerable_GetEnumerator();
-
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return GenericEnumerable_GetEnumerator();
+            throw new NotImplementedException();
         }
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        public abstract IEnumerator<T> GetEnumerator();
+
+        public void CopyTo(Array array, int index)
         {
-            return GenericEnumerable_GetEnumerator();
+            throw new NotImplementedException();
+        }
+
+        public bool IsSynchronized
+        {
+            get { return false; }
+        }
+
+        public object SyncRoot
+        {
+            get { return null; }
         }
     }
 }
