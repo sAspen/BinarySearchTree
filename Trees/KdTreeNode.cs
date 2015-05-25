@@ -13,7 +13,6 @@ namespace Trees
         private double[] data;
         internal readonly int Axis;
         private KdTreeNode LeftChild, RightChild;
-        //internal bool Ignore;
 
         public KdTreeNode() { }
         public KdTreeNode(double[] data, int axis) : this(data, axis, null, null) { }
@@ -24,16 +23,16 @@ namespace Trees
             Left = left;
             Right = right;
         }
-
+        
         public double[] Value
         {
             get
             {
-                throw new NotImplementedException();
+                return data;
             }
             set
             {
-                throw new NotImplementedException();
+                data = (double[]) value.Clone();
             }
         }
 
@@ -472,19 +471,26 @@ namespace Trees
             }
         }
 
-        public int Count
+        public virtual int Count
         {
-            get { throw new NotImplementedException(); }
+            get
+            {
+                int count = 0;
+                foreach (var node in this) {
+                    count++;
+                }
+                return count;
+            }
         }
 
         public bool IsSynchronized
         {
-            get { throw new NotImplementedException(); }
+            get { return false; }
         }
 
         public object SyncRoot
         {
-            get { throw new NotImplementedException(); }
+            get { return null; }
         }
 
 
