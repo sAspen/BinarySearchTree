@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Trees
 {
@@ -58,13 +55,13 @@ namespace Trees
         public delegate object VisitNode(params object[] arguments);
         //arguments[0]: input data
         //arguments[1]: null or node containing arguments[0]
-        //arguments[2]: null or parent of arguments[1]
+        //arguments[2]: traceback stack of parents
         //arguments[3]: true if arguments[1] is Left child of arguments[2]
         public struct VisitNodeArgument
         {
             public const int Data = 0,
             Node = 1,
-            Parent = 2,
+            Parents = 2,
             WentLeft = 3;
         }
 
@@ -86,7 +83,7 @@ namespace Trees
         public virtual object FindAndVisit(T data, VisitNode onSuccess, VisitNode onFailure)
         {
             bool wentLeft = false;
-            object[] arguments = { data, this, null, false };
+            object[] arguments = { data, this, new Stack<BinarySearchTreeNode<T>>(), false };
             BinarySearchTreeNode<T> previous = null;
 
             for (BinaryTreeNode<T> current = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Node];
@@ -96,16 +93,18 @@ namespace Trees
 
                 if (result == 0) {
                     return onSuccess(data, current, previous, wentLeft);
-                } else if (result > 0) {
-                    arguments[VisitNodeArgument.WentLeft] = true;
-
-                    arguments[VisitNodeArgument.Parent] = current;
-                    current = (BinarySearchTreeNode<T>) current.Left;
                 } else {
-                    arguments[VisitNodeArgument.WentLeft] = false;
+                    ((Stack<BinarySearchTreeNode<T>>)
+                        arguments[VisitNodeArgument.Parents]).
+                        Push((BinarySearchTreeNode<T>) current);
 
-                    arguments[VisitNodeArgument.Parent] = current;
-                    current = (BinarySearchTreeNode<T>) current.Right;
+                    if (result > 0) {
+                        arguments[VisitNodeArgument.WentLeft] = true;
+                        current = (BinarySearchTreeNode<T>) current.Left;
+                    } else {
+                        arguments[VisitNodeArgument.WentLeft] = false;
+                        current = (BinarySearchTreeNode<T>) current.Right;
+                    }
                 }
             }
 
@@ -127,14 +126,14 @@ namespace Trees
             return (BinarySearchTreeNode<T>) FindAndVisit(data, onSuccess, VisitReturnNull);
         }
 
-        internal virtual BinarySearchTreeNode<T> GetParentOf(T data)
+        internal virtual Stack<BinarySearchTreeNode<T>> GetParentOf(T data)
         {
             VisitNode onSuccess =
                 (object[] arguments) => {
-                    return arguments[VisitNodeArgument.Parent];
+                    return ((Stack<BinarySearchTreeNode<T>>) arguments[VisitNodeArgument.Parents]);
                 };
 
-            return (BinarySearchTreeNode<T>) FindAndVisit(data, onSuccess, VisitReturnNull);
+            return (Stack<BinarySearchTreeNode<T>>) FindAndVisit(data, onSuccess, VisitReturnNull);
         }
 
         public virtual void Add(T data)
@@ -144,7 +143,7 @@ namespace Trees
                     T leafData = (T) arguments[VisitNodeArgument.Data];
                     var leaf = new BinarySearchTreeNode<T>(leafData);
 
-                    var parent = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Parent];
+                    var parent = ((Stack<BinarySearchTreeNode<T>>) arguments[VisitNodeArgument.Parents]).Pop();
                     var wentLeft = (bool) arguments[VisitNodeArgument.WentLeft];
 
                     if (wentLeft) {
@@ -170,7 +169,7 @@ namespace Trees
             VisitNode onSuccessUsingPredecessor =
                  (object[] arguments) => {
                      var node = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Node];
-                     var parent = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Parent];
+                     var parent = ((Stack<BinarySearchTreeNode<T>>) arguments[VisitNodeArgument.Parents]).Pop();
                      var wentLeft = (bool) arguments[VisitNodeArgument.WentLeft];
 
                      if (node.Left == null) {
@@ -198,7 +197,7 @@ namespace Trees
             VisitNode onSuccessUsingSuccessor =
                 (object[] arguments) => {
                     var node = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Node];
-                    var parent = (BinarySearchTreeNode<T>) arguments[VisitNodeArgument.Parent];
+                    var parent = ((Stack<BinarySearchTreeNode<T>>) arguments[VisitNodeArgument.Parents]).Pop();
                     var wentLeft = (bool) arguments[VisitNodeArgument.WentLeft];
 
                     if (node.Right == null) {

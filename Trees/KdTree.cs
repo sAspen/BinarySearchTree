@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Trees
 {
@@ -93,6 +90,18 @@ namespace Trees
             return root.Remove(item);
         }
 
+        public double[] GetNearestTo(double[] targetPoint)
+        {
+            if (Root == null || targetPoint.Length != Dimensions) {
+                return null;
+            }
+            if (root.IsLeaf) {
+                return (double[]) root.Value.Clone();
+            }
+
+            return root.GetNearestTo(targetPoint);
+        }
+
         public void CopyTo(Array array, int index)
         {
             if ((double[][]) array == null) {
@@ -136,6 +145,25 @@ namespace Trees
         public object SyncRoot
         {
             get { return null; }
+        }
+
+        public static double GetDistanceTo(double[] sourcePoint, double[] targetPoint)
+        {
+            if (sourcePoint.Length != targetPoint.Length) {
+                return Double.NaN;
+            }
+
+            double ret = 0.0;
+            for (int i = 0; i < sourcePoint.Length; i++) {
+                ret += Math.Pow(sourcePoint[i] - targetPoint[i], 2);
+            }
+
+            return ret;
+        }
+
+        public override string ToString()
+        {
+            return "Count = " + Count;
         }
     }
 }

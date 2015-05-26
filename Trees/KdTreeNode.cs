@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Trees
 {
@@ -23,7 +21,7 @@ namespace Trees
             Left = left;
             Right = right;
         }
-        
+
         public double[] Value
         {
             get
@@ -60,11 +58,11 @@ namespace Trees
         {
             get
             {
-                return LeftChild;
+                return RightChild;
             }
             set
             {
-                LeftChild = (KdTreeNode) value;
+                RightChild = (KdTreeNode) value;
             }
         }
         public delegate object VisitNode(params object[] arguments);
@@ -76,7 +74,7 @@ namespace Trees
         {
             public const int Data = 0,
             Node = 1,
-            Parent = 2,
+            Parents = 2,
             WentLeft = 3;
         }
 
@@ -95,83 +93,85 @@ namespace Trees
                     return null;
                 };
 
-
-
-        public virtual object FindAndVisit(double[] data, VisitNode onSuccess, VisitNode onFailure)
+        public virtual object FindAndVisit(double[] targetPoint, VisitNode onSuccess, VisitNode onFailure)
         {
-            bool wentLeft = false;
-            object[] arguments = { data, this, null, false };
-            KdTreeNode previous = null;
+            var previous = new Stack<KdTreeNode>();
+            object[] arguments = { targetPoint, this, previous, false };
 
             for (KdTreeNode current = (KdTreeNode) arguments[VisitNodeArgument.Node];
                 current != null;
                 arguments[VisitNodeArgument.Node] = current) {
-                int result = current.Value[current.Axis].CompareTo(data);
-
-                if (result == 0) {
-                    if (!current.Value.SequenceEqual(data)) {
-                        throw new SystemException();
-                    }
-                    return onSuccess(data, current, previous, wentLeft);
-                } else if (result > 0) {
-                    arguments[VisitNodeArgument.WentLeft] = true;
-
-                    arguments[VisitNodeArgument.Parent] = current;
-                    current = (KdTreeNode) current.Left;
+                if (current.Value.SequenceEqual(targetPoint)) {
+                    return onSuccess(arguments);
                 } else {
-                    arguments[VisitNodeArgument.WentLeft] = false;
+                    int result = current.Value[current.Axis].CompareTo(targetPoint[current.Axis]);
 
-                    arguments[VisitNodeArgument.Parent] = current;
-                    current = (KdTreeNode) current.Right;
+                    previous.Push((KdTreeNode) current);
+
+                    if (result > 0) {
+                        arguments[VisitNodeArgument.WentLeft] = true;
+                        current = (KdTreeNode) current.Left;
+                    } else {
+                        arguments[VisitNodeArgument.WentLeft] = false;
+                        current = (KdTreeNode) current.Right;
+                    }
                 }
             }
 
             return onFailure(arguments);
         }
-        public virtual bool Contains(double[] data)
+
+        public virtual bool Contains(double[] targetPoint)
         {
-            return (bool) FindAndVisit(data, VisitReturnTrue, VisitReturnFalse);
+            return (bool) FindAndVisit(targetPoint, VisitReturnTrue, VisitReturnFalse);
         }
 
-        internal virtual KdTreeNode Find(double[] data)
+        internal virtual KdTreeNode Find(double[] targetPoint)
         {
             KdTreeNode dummy;
-            return Find(data, out dummy);
+            return Find(targetPoint, out dummy);
         }
 
-        internal virtual KdTreeNode Find(double[] data, out KdTreeNode parent)
+        internal virtual KdTreeNode Find(double[] targetPoint, out KdTreeNode parent)
         {
             parent = null;
             KdTreeNode parentNode = null;
 
             VisitNode onSuccess =
                 (object[] arguments) => {
-                    parentNode = (KdTreeNode) arguments[VisitNodeArgument.Parent];
+                    var parents = (Stack<KdTreeNode>) arguments[VisitNodeArgument.Parents];
+                    if (parents.Count > 0) {
+                        parentNode = parents.Pop();
+                    }
                     return arguments[VisitNodeArgument.Node];
                 };
 
-            
-            var ret = (KdTreeNode) FindAndVisit(data, onSuccess, VisitReturnNull);
+
+            var ret = (KdTreeNode) FindAndVisit(targetPoint, onSuccess, VisitReturnNull);
             parent = parentNode;
             return ret;
         }
 
-        internal virtual KdTreeNode GetParentOf(double[] data)
+        internal virtual Stack<KdTreeNode> GetParentOf(double[] targetPoint)
         {
-            VisitNode onSuccess =
+            VisitNode onVisit =
                 (object[] arguments) => {
-                    return arguments[VisitNodeArgument.Parent];
+                    return ((Stack<KdTreeNode>) arguments[VisitNodeArgument.Parents]);
                 };
 
-            return (KdTreeNode) FindAndVisit(data, onSuccess, VisitReturnNull);
+            var ret = (Stack<KdTreeNode>) FindAndVisit(targetPoint, onVisit, onVisit);
+            if (ret.Count == 0) {
+                ret.Push(this);
+            }
+            return ret;
         }
 
-        public virtual void Add(double[] data)
+        public virtual void Add(double[] targetPoint)
         {
             VisitNode onFailure =
                 (object[] arguments) => {
                     double[] leafData = (double[]) arguments[VisitNodeArgument.Data];
-                    var parent = (KdTreeNode) arguments[VisitNodeArgument.Parent];
+                    var parent = ((Stack<KdTreeNode>) arguments[VisitNodeArgument.Parents]).Pop();
                     var wentLeft = (bool) arguments[VisitNodeArgument.WentLeft];
 
                     var leaf = new KdTreeNode(leafData, parent.Axis + 1);
@@ -185,54 +185,37 @@ namespace Trees
                     return true;
                 };
 
-            FindAndVisit(data, VisitReturnFalse, onFailure);
+            FindAndVisit(targetPoint, VisitReturnFalse, onFailure);
         }
 
-        public bool Remove(double[] data)
+        public bool Remove(double[] targetPoint)
         {
-            var node = Find(data);
+            KdTreeNode parent = null, replacement = null;
+            KdTreeNode node = Find(targetPoint, out parent);
             if (node == null) {
                 return false;
             }
 
-            while (!node.IsLeaf) {
-                var replacement = node.GetSuccessorNode();
-                if (replacement != null) {
-                    replacement = node.GetPredecessorNode();
-                }
-                node.Value = (double[]) replacement.Value.Clone();
-                node = replacement;
+            if (!node.IsLeaf) {
+                do {
+                    replacement = node.GetSuccessorNode(out parent);
+                    if (replacement == null) {
+                        replacement = node.GetPredecessorNode(out parent);
+                    }
+                    node.Value = (double[]) replacement.Value.Clone();
+                    node = replacement;
+                } while (!node.IsLeaf);
             }
 
-            var parent = GetParentOf(node.Value);
             if (parent.Left == node) {
                 parent.Left = null;
-            } else {
+            } else if (parent.Right == node) {
                 parent.Right = null;
+            } else {
+                throw new SystemException();
             }
 
-            return true;
-        }
-
-        public List<KdTreeNode> SortBy(int whichAxis)
-        {
-            var nodes = new List<KdTreeNode>(Count);
-
-            var parents = new Stack<KdTreeNode>();
-            var current = this;
-            while (parents.Count > 0 || current != null) {
-                if (current != null) {
-                    nodes.Add(current);
-                    if (whichAxis != current.Axis && current.Right != null) {
-                        parents.Push((KdTreeNode) current.Right);
-                    }
-                    current = (KdTreeNode) current.Left;
-                } else {
-                    current = parents.Pop();
-                }
-            }
-
-            return nodes.OrderBy(n => n.Value[whichAxis]).ToList();
+            return !Contains(targetPoint);
         }
 
         internal virtual double[] Min()
@@ -242,7 +225,27 @@ namespace Trees
 
         internal virtual double[] Min(int whichAxis)
         {
-            return SortBy(whichAxis).First().Value;
+            var nodes = new List<KdTreeNode>(Count);
+
+            double[] currentMin = Enumerable.Repeat(Double.PositiveInfinity, Dimensions).ToArray();
+            var parents = new Stack<KdTreeNode>();
+            var current = this;
+            while (parents.Count > 0 || current != null) {
+                if (current != null) {
+                    nodes.Add(current);
+                    if (whichAxis != current.Axis && current.Right != null) {
+                        parents.Push((KdTreeNode) current.Right);
+                    }
+                    if (current.Value[whichAxis] < currentMin[whichAxis]) {
+                        currentMin = (double[]) current.Value.Clone();
+                    }
+                    current = (KdTreeNode) current.Left;
+                } else {
+                    current = parents.Pop();
+                }
+            }
+
+            return nodes.OrderBy(n => n.Value[whichAxis]).First().Value;
         }
 
         internal virtual KdTreeNode MinNode(int whichAxis)
@@ -270,7 +273,27 @@ namespace Trees
 
         internal virtual double[] Max(int whichAxis)
         {
-            return SortBy(whichAxis).Last().Value;
+            var nodes = new List<KdTreeNode>(Count);
+
+            double[] currentMax = Enumerable.Repeat(Double.NegativeInfinity, Dimensions).ToArray();
+            var parents = new Stack<KdTreeNode>();
+            var current = this;
+            while (parents.Count > 0 || current != null) {
+                if (current != null) {
+                    nodes.Add(current);
+                    if (whichAxis != current.Axis && current.Left != null) {
+                        parents.Push((KdTreeNode) current.Left);
+                    }
+                    if (current.Value[whichAxis] > currentMax[whichAxis]) {
+                        currentMax = (double[]) current.Value.Clone();
+                    }
+                    current = (KdTreeNode) current.Right;
+                } else {
+                    current = parents.Pop();
+                }
+            }
+
+            return nodes.OrderBy(n => n.Value[whichAxis]).Last().Value;
         }
 
         internal virtual KdTreeNode MaxNode(int whichAxis)
@@ -312,7 +335,11 @@ namespace Trees
                 return null;
             }
 
-            return ((KdTreeNode) Left).MaxNode(Axis, out parent);
+            var ret = ((KdTreeNode) Left).MaxNode(Axis, out parent);
+            if (parent == null) {
+                parent = this;
+            }
+            return ret;
         }
 
         internal double[] GetSuccessor()
@@ -337,7 +364,64 @@ namespace Trees
                 return null;
             }
 
-            return ((KdTreeNode) Right).MinNode(Axis, out parent);
+            var ret = ((KdTreeNode) Right).MinNode(Axis, out parent);
+            if (parent == null) {
+                parent = this;
+            }
+            return ret;
+        }
+
+        public double[] GetNearestTo(double[] targetPoint)
+        {
+            double bestDist = Double.PositiveInfinity;
+            KdTreeNode current = null, currentBestNode = null;
+
+            Stack<KdTreeNode> parents = GetParentOf(targetPoint);
+            while (parents.Count > 0) {
+                current = parents.Pop();
+
+                double distance = current.GetDistanceTo(targetPoint);
+
+                if (distance < bestDist) {
+                    bestDist = distance;
+                    currentBestNode = current;
+                }
+
+                int axis = current.Axis;
+                if (Math.Pow(targetPoint[axis] - current.Value[axis], 2) < bestDist) {
+                    Stack<KdTreeNode> nextParents = null;
+                    if (targetPoint[axis] < current.Value[axis] && current.Right != null) {
+                        nextParents = ((KdTreeNode) current.Right).GetParentOf(targetPoint);
+                    } else if (current.Left != null) {
+                        nextParents = ((KdTreeNode) current.Left).GetParentOf(targetPoint);
+                    }
+                    if (nextParents != null) {
+                        while (nextParents.Count > 0) {
+                            parents.Push(nextParents.Pop());
+                        }
+                    }
+                }
+            }
+
+            if (currentBestNode == null) {
+                currentBestNode = this;
+            }
+
+            return (double[]) currentBestNode.Value.Clone();
+        }
+
+        public double GetDistanceTo(double[] targetPoint)
+        {
+            if (Dimensions != targetPoint.Length) {
+                return Double.NaN;
+            }
+
+            double ret = 0.0;
+            for (int i = 0; i < Dimensions; i++) {
+                ret += Math.Pow(data[i] - targetPoint[i], 2);
+            }
+
+            return ret;
         }
 
         public IEnumerator<double[]> GetEnumerator()
@@ -422,7 +506,7 @@ namespace Trees
                 yield break;
             }
         }
-        
+
         public bool IsLeaf
         {
             get
@@ -493,10 +577,38 @@ namespace Trees
             get { return null; }
         }
 
-
         IEnumerator IEnumerable.GetEnumerator()
         {
             throw new NotImplementedException();
+        }
+
+        public override string ToString()
+        {
+            string s = "{ ";
+
+            for (int i = 0; i < data.Length; i++) {
+                s += data[i] + ", ";
+            }
+
+            s = s.Substring(0, s.Length - 2) + " }";
+
+            return s;
+        }
+
+        public void Assert()
+        {
+            if (Left != null) {
+                if (!(Left.Value[Axis] < Value[Axis])) {
+                    throw new SystemException();
+                }
+                LeftChild.Assert();
+            }
+            if (Right != null) {
+                if (!(Right.Value[Axis] >= Value[Axis])) {
+                    throw new SystemException();
+                }
+                RightChild.Assert();
+            }
         }
     }
 }
